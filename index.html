@@ -242,7 +242,7 @@
 			<div class="row">
 				<div id="g_id_onload"
 					data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
-					data-context="signin" data-ux_mode="popup" data-callback="onSignIn"></div>
+					data-context="signin" data-ux_mode="popup" data-auto_prompt="false" data-callback="onSignIn"></div>
 				<div class="g_id_signin" data-type="standard"></div>
 			</div>
 		</header>
@@ -653,10 +653,14 @@
 
 		// Boot
 		document.addEventListener("DOMContentLoaded", () => {
-			const ready = () => typeof google !== "undefined" && google.accounts?.oauth2;
-			if (ready()) initAuth();
+			const ready = () => typeof google !== "undefined";
+			const boot = () => {
+				try { google.accounts.id.disableAutoSelect(); } catch { }
+				initAuth();
+			};
+			if (ready()) boot();
 			else {
-				const h = setInterval(() => { if (ready()) { clearInterval(h); initAuth(); } }, 50);
+				const h = setInterval(() => { if (ready()) { clearInterval(h); boot(); } }, 50);
 			}
 		});
 	</script>
