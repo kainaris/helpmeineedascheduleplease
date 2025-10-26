@@ -6,7 +6,6 @@
 	<title>Google Drive JSON Editor</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<style>
-		/* your original styles */
 		:root {
 			--bg: #0b1020;
 			--card: #121934;
@@ -137,7 +136,7 @@
 			color: var(--warn)
 		}
 
-		/* calendar styles appended */
+		/* Calendar UI */
 		.calendar {
 			display: grid;
 			grid-template-columns: 260px 1fr;
@@ -246,7 +245,7 @@
 			align-items: center
 		}
 
-		/* hide app until signed in */
+		/* Gate UI until signed in */
 		#app {
 			display: none
 		}
@@ -265,7 +264,7 @@
 			</div>
 		</header>
 
-		<!-- App container hidden until signed in -->
+		<!-- Hidden app -->
 		<div id="app" class="card">
 			<div class="row">
 				<div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
@@ -301,12 +300,27 @@
 		</div>
 	</div>
 
-	<script src="https://accounts.google.com/gsi/client" async defer></script>
+	<!-- 1) Global stub so GIS always finds a function -->
+	<script>
+		window.__driveCallQueue = 0;
+		window.onSignIn = function () {
+			if (typeof window.__driveSignIn === "function") return window.__driveSignIn();
+			window.__driveCallQueue++;
+		};
+	</script>
 
+	<!-- 2) App module: bind real sign-in and run the app after event -->
 	<script type="module">
 		import {
-			isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
+			signIn, isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
 		} from './drive.js';
+
+		// Bind the real sign-in for the stub
+		window.__driveSignIn = async () => {
+			try { await signIn(); window.dispatchEvent(new CustomEvent("drive:signed-in")); }
+			catch (e) { window.dispatchEvent(new CustomEvent("drive:sign-in-error", { detail: e })); }
+		};
+		if (window.__driveCallQueue > 0) window.__driveSignIn();
 
 		const FILE_NAME = "helpmeineedaschedulepleasedata.json";
 
@@ -325,21 +339,20 @@
 		const detailsEl = $("details");
 		const currentDateEl = $("currentDate");
 
+		// State
 		let fileId = null;
 		let model = [];
 		let selectedIndex = -1;
 		let dirty = false;
 
+		// UI helpers
 		function hideSigninUi() {
 			const onloadDiv = document.getElementById("g_id_onload");
 			const btnDiv = document.querySelector(".g_id_signin");
 			if (onloadDiv) onloadDiv.style.display = "none";
 			if (btnDiv) btnDiv.style.display = "none";
 		}
-		function setStatus(text, cls = "") {
-			statusEl.className = "status " + cls;
-			statusEl.textContent = text;
-		}
+		function setStatus(text, cls = "") { statusEl.className = "status " + cls; statusEl.textContent = text; }
 		function setEnabled(on) {
 			[reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
 			detailsEl.disabled = !on || selectedIndex < 0;
@@ -387,7 +400,6 @@
 			else { currentDateEl.textContent = "No date selected"; detailsEl.value = ""; }
 			setEnabled(true);
 		}
-
 		async function ensureAndLoad() {
 			setStatus("Loading…");
 			let f = await findFileByName(FILE_NAME);
@@ -401,15 +413,11 @@
 			setStatus("Ready", "ok");
 		}
 
-		// Gate UI: only show app after signed in
+		// Gate: only reveal app after sign-in
 		window.addEventListener("drive:signed-in", async () => {
 			hideSigninUi();
-			appEl.style.display = "";     // reveal
+			appEl.style.display = "";
 			await ensureAndLoad();
-		});
-
-		window.addEventListener("drive:sign-in-error", () => {
-			// keep app hidden; nothing else to show
 		});
 
 		// Buttons
@@ -446,6 +454,9 @@
 
 		window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 	</script>
+
+	<!-- 3) Load GIS last -->
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 
 </html>

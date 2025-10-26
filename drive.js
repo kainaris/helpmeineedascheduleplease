@@ -1,4 +1,4 @@
-// drive.js — auth + Google Drive helpers
+// drive.js — Google Identity + Drive REST helpers (no UI)
 
 const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -18,16 +18,8 @@ export async function signIn() {
 				tokenClient = google.accounts.oauth2.initTokenClient({
 					client_id: CLIENT_ID,
 					scope: SCOPE,
-					callback: (tokResp) => {
-						accessToken = tokResp.access_token;
-						window.dispatchEvent(new CustomEvent("drive:signed-in"));
-						resolve(accessToken);
-					},
-					error_callback: (err) => {
-						accessToken = null;
-						window.dispatchEvent(new CustomEvent("drive:sign-in-error", { detail: err }));
-						reject(err);
-					},
+					callback: (tokResp) => { accessToken = tokResp.access_token; resolve(accessToken); },
+					error_callback: (err) => { accessToken = null; reject(err); },
 				});
 			}
 			tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
@@ -36,10 +28,7 @@ export async function signIn() {
 	});
 }
 
-// Expose GIS callback used by data-callback="onSignIn"
-window.onSignIn = () => { signIn().catch(() => { }); };
-
-// ---- Drive REST helpers ----
+// ---- Drive REST ----
 async function driveFetch(url, options = {}) {
 	if (!accessToken) throw new Error("No access token");
 	const res = await fetch(url, {
