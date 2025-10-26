@@ -105,11 +105,9 @@
 			color: var(--warn)
 		}
 
-		/* Layout changes */
 		.calendar {
 			display: grid;
 			grid-template-columns: 340px 1fr;
-			/* enlarged sidebar */
 			gap: 16px;
 			min-height: 420px
 		}
@@ -144,6 +142,18 @@
 			overflow: auto
 		}
 
+		.year {
+			padding: 8px 12px;
+			font-weight: 800;
+			opacity: .9;
+			border-bottom: 1px solid var(--line);
+			background: rgba(255, 255, 255, .02)
+		}
+
+		.year:not(:first-child) {
+			border-top: 1px solid var(--line)
+		}
+
 		.item {
 			padding: 10px 12px;
 			border-bottom: 1px solid var(--line);
@@ -161,17 +171,17 @@
 			background: rgba(91, 140, 255, .15)
 		}
 
-		.item .summary {
+		.when {
+			font-weight: 700;
+			white-space: nowrap;
+			margin-right: 6px
+		}
+
+		.summary {
 			color: var(--muted);
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis
-		}
-
-		.item .when {
-			font-weight: 700;
-			white-space: nowrap;
-			margin-right: 6px
 		}
 
 		.icon-btn {
@@ -249,7 +259,6 @@
 			<div class="calendar">
 				<aside class="sidebar">
 					<div class="sidebar-header">
-						<!-- Full-width plus button, no date picker -->
 						<button id="addBtn" class="add-btn" disabled aria-label="Add">+</button>
 					</div>
 					<div id="list" class="list"></div>
@@ -289,7 +298,7 @@
 		let fileId = null;
 		let tokenClient = null;
 
-		// App model: array of {date:'YYYY-MM-DD', time:'HH:MM', details:'...'}
+		// Model: {date:'YYYY-MM-DD', time:'HH:MM', details:'...'}
 		let model = [];
 		let selectedIndex = -1;
 		let dirty = false;
@@ -305,11 +314,8 @@
 		const detailsEl = $("details");
 		const currentDateEl = $("currentDate");
 
-		// UI helpers
-		function setStatus(text, cls = "") {
-			statusEl.className = "status " + cls;
-			statusEl.textContent = text;
-		}
+		// UI
+		function setStatus(text, cls = "") { statusEl.className = "status " + cls; statusEl.textContent = text; }
 		function setEnabled(on) {
 			[reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
 			detailsEl.disabled = !on || selectedIndex < 0;
@@ -328,48 +334,35 @@
 			if (btnDiv) btnDiv.style.display = "";
 		}
 
-		// Token cache helpers
+		// Token cache
 		function saveToken(t) {
 			const expAt = Date.now() + (t.expires_in ? (t.expires_in - 60) * 1000 : 50 * 60 * 1000);
 			localStorage.setItem(LS_KEY, JSON.stringify({ token: t, expAt }));
 		}
-		function loadToken() {
-			try { return JSON.parse(localStorage.getItem(LS_KEY)); }
-			catch { return null; }
-		}
-		function clearToken() {
-			localStorage.removeItem(LS_KEY);
-		}
+		function loadToken() { try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; } }
+		function clearToken() { localStorage.removeItem(LS_KEY); }
 		function scheduleRefresh(t) {
 			clearTimeout(refreshTimer);
 			const ms = Math.max(30_000, (t.expires_in ? (t.expires_in - 120) : 1800) * 1000);
-			refreshTimer = setTimeout(() => {
-				try { tokenClient.requestAccessToken({ prompt: "" }); } catch { }
-			}, ms);
+			refreshTimer = setTimeout(() => { try { tokenClient.requestAccessToken({ prompt: "" }); } catch { } }, ms);
 		}
 
-		// Init GIS and try silent auth
+		// Auth
 		function initAuth() {
 			tokenClient = google.accounts.oauth2.initTokenClient({
-				client_id: CLIENT_ID,
-				scope: SCOPE,
+				client_id: CLIENT_ID, scope: SCOPE,
 				callback: async (tokResp) => {
 					accessToken = tokResp.access_token;
 					try { google.accounts.oauth2.setToken(tokResp); } catch { }
 					saveToken(tokResp);
 					localStorage.setItem(LS_CONSENT, "1");
 					scheduleRefresh(tokResp);
-					hideSigninUi();
-					setEnabled(true);
-					setStatus("Signed in", "ok");
+					hideSigninUi(); setEnabled(true); setStatus("Signed in", "ok");
 					await ensureAndLoad();
 				},
 				error_callback: (err) => {
 					console.error(err);
-					accessToken = null;
-					showSigninUi();
-					setEnabled(false);
-					setStatus("Sign-in canceled or failed", "warn");
+					accessToken = null; showSigninUi(); setEnabled(false); setStatus("Sign-in canceled or failed", "warn");
 				},
 			});
 
@@ -377,25 +370,17 @@
 			if (cached && cached.expAt > Date.now() && cached.token?.access_token) {
 				try { google.accounts.oauth2.setToken(cached.token); } catch { }
 				accessToken = cached.token.access_token;
-				hideSigninUi();
-				setEnabled(true);
-				setStatus("Signed in", "ok");
+				hideSigninUi(); setEnabled(true); setStatus("Signed in", "ok");
 				ensureAndLoad();
 				const remaining = Math.max(5_000, cached.expAt - Date.now());
 				clearTimeout(refreshTimer);
 				refreshTimer = setTimeout(() => tokenClient.requestAccessToken({ prompt: "" }), remaining);
 			} else {
 				const gotConsentOnce = localStorage.getItem(LS_CONSENT) === "1";
-				if (gotConsentOnce) {
-					try { tokenClient.requestAccessToken({ prompt: "" }); }
-					catch { showSigninUi(); }
-				} else {
-					showSigninUi();
-				}
+				if (gotConsentOnce) { try { tokenClient.requestAccessToken({ prompt: "" }); } catch { showSigninUi(); } }
+				else { showSigninUi(); }
 			}
 		}
-
-		// Manual sign-in entry point
 		async function onSignIn() {
 			setStatus("Signing in…");
 			try {
@@ -403,43 +388,31 @@
 				const gotConsentOnce = localStorage.getItem(LS_CONSENT) === "1";
 				tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
 			} catch (e) {
-				console.error(e);
-				setStatus("Sign-in init failed", "warn");
-				showSigninUi();
+				console.error(e); setStatus("Sign-in init failed", "warn"); showSigninUi();
 			}
 		}
 		window.onSignIn = onSignIn;
 
-		// Drive helpers
+		// Drive
 		async function driveFetch(url, options = {}) {
 			if (!accessToken) throw new Error("No access token");
-			const res = await fetch(url, {
-				...options,
-				headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
-			});
+			const res = await fetch(url, { ...options, headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
 			if (res.status === 401) {
 				try {
 					await new Promise((resolve, reject) => {
 						tokenClient.callback = (tokResp) => {
 							accessToken = tokResp.access_token;
 							try { google.accounts.oauth2.setToken(tokResp); } catch { }
-							saveToken(tokResp);
-							scheduleRefresh(tokResp);
-							resolve();
+							saveToken(tokResp); scheduleRefresh(tokResp); resolve();
 						};
 						tokenClient.error_callback = reject;
 						tokenClient.requestAccessToken({ prompt: "" });
 					});
-					const retry = await fetch(url, {
-						...options,
-						headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
-					});
+					const retry = await fetch(url, { ...options, headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
 					if (!retry.ok) throw new Error(`${retry.status} ${retry.statusText}`);
 					return retry;
 				} catch {
-					clearToken();
-					showSigninUi();
-					setEnabled(false);
+					clearToken(); showSigninUi(); setEnabled(false);
 					throw new Error("Auth expired. Sign in again.");
 				}
 			}
@@ -457,16 +430,9 @@
 			return data.files?.[0] || null;
 		}
 		function buildMultipart(parts) {
-			const boundary = "-------314159265358979323846";
-			const crlf = "\r\n";
-			let data = "";
-			for (const p of parts) {
-				data += `--${boundary}${crlf}`;
-				data += `Content-Type: ${p.type}${crlf}${crlf}`;
-				data += `${p.data}${crlf}`;
-			}
-			data += `--${boundary}--${crlf}`;
-			return { data, contentType: `multipart/related; boundary=${boundary}` };
+			const boundary = "-------314159265358979323846"; const crlf = "\r\n";
+			let data = ""; for (const p of parts) { data += `--${boundary}${crlf}`; data += `Content-Type: ${p.type}${crlf}${crlf}`; data += `${p.data}${crlf}`; }
+			data += `--${boundary}--${crlf}`; return { data, contentType: `multipart/related; boundary=${boundary}` };
 		}
 		async function createJsonFile(name, initial = []) {
 			const metadata = { name, mimeType: "application/json" };
@@ -502,15 +468,8 @@
 				else if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
 					arr = Object.entries(parsed.data).map(([date, details]) => ({ date, details: String(details ?? "") }));
 				}
-				// ensure shape {date, time, details}
-				return (arr || []).map(x => ({
-					date: x.date || "",
-					time: x.time || "00:00",
-					details: String(x.details ?? "")
-				}));
-			} catch {
-				return [];
-			}
+				return (arr || []).map(x => ({ date: x.date || "", time: x.time || "00:00", details: String(x.details ?? "") }));
+			} catch { return [] }
 		}
 		function sortModel() {
 			model.sort((a, b) => {
@@ -519,20 +478,43 @@
 				return ak.localeCompare(bk);
 			});
 		}
-		function formatWhen(dateStr, timeStr) {
-			if (!dateStr) return "";
-			const [y, m, d] = dateStr.split("-").map(n => Number(n));
-			const [hh, mm] = (timeStr || "00:00").split(":").map(n => Number(n));
-			const dt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
-			const weekday = dt.toLocaleDateString(undefined, { weekday: "long" });
-			const date = dt.toISOString().slice(0, 10); // YYYY-MM-DD
-			const hm = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
-			return `${date} ${weekday} ${hm}`;
+
+		// Formatting: "17 nov¹¹ monday 1930h"
+		const MON_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+		const WD_ABBR = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+		const SUP = { 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+		function superscript(n) {
+			return String(n).split("").map(d => SUP[d] || "").join("");
 		}
+		function fmtFancy(dateStr, timeStr) {
+			if (!dateStr) return "";
+			const [y, m, d] = dateStr.split("-").map(Number);
+			const [hh, mm] = (timeStr || "00:00").split(":").map(Number);
+			const dt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+			const day = String(d || 1);
+			const mon = MON_ABBR[(m || 1) - 1];
+			const monSup = superscript(m || 1);
+			const wd = WD_ABBR[dt.getDay()];
+			const hhmm = String(hh || 0).padStart(2, "0") + String(mm || 0).padStart(2, "0");
+			return `${day} ${mon}${monSup} ${wd} ${hhmm}h`;
+		}
+
+		// Render grouped by year
 		function renderList() {
 			listEl.innerHTML = "";
 			sortModel();
+
+			let currentYear = null;
 			model.forEach((item, idx) => {
+				const [y] = (item.date || "").split("-");
+				if (y && y !== currentYear) {
+					currentYear = y;
+					const yh = document.createElement("div");
+					yh.className = "year";
+					yh.textContent = currentYear;
+					listEl.appendChild(yh);
+				}
+
 				const el = document.createElement("div");
 				el.className = "item" + (idx === selectedIndex ? " active" : "");
 
@@ -540,12 +522,15 @@
 				left.style.display = "flex";
 				left.style.flexDirection = "column";
 				left.style.flex = "1 1 auto";
+
 				const when = document.createElement("div");
 				when.className = "when";
-				when.textContent = formatWhen(item.date, item.time);
+				when.textContent = fmtFancy(item.date, item.time);
+
 				const summary = document.createElement("div");
 				summary.className = "summary";
 				summary.textContent = (item.details || "").split("\n")[0];
+
 				left.appendChild(when);
 				left.appendChild(summary);
 
@@ -555,19 +540,13 @@
 				editBtn.title = "Edit date and time";
 				editBtn.textContent = "✎";
 
-				// Hidden datetime input for editing date/time
 				const dtInput = document.createElement("input");
 				dtInput.type = "datetime-local";
 				dtInput.style.position = "fixed";
 				dtInput.style.opacity = "0";
 				dtInput.style.pointerEvents = "none";
 				dtInput.tabIndex = -1;
-
-				const toLocalValue = (date, time) => {
-					// Build local datetime string "YYYY-MM-DDTHH:MM"
-					return `${date || new Date().toISOString().slice(0, 10)}T${(time || "00:00")}`;
-				};
-				dtInput.value = toLocalValue(item.date, item.time);
+				dtInput.value = `${item.date || new Date().toISOString().slice(0, 10)}T${(item.time || "00:00")}`;
 
 				editBtn.addEventListener("click", (e) => {
 					e.stopPropagation();
@@ -576,7 +555,7 @@
 					dtInput.focus();
 				});
 				dtInput.addEventListener("change", () => {
-					const v = dtInput.value; // "YYYY-MM-DDTHH:MM"
+					const v = dtInput.value;
 					if (v && v.includes("T")) {
 						const [d, t] = v.split("T");
 						model[idx].date = d;
@@ -595,10 +574,10 @@
 				listEl.appendChild(el);
 			});
 		}
+
 		function updateCurrentHeader() {
 			const sel = model[selectedIndex];
-			if (sel) currentDateEl.textContent = formatWhen(sel.date, sel.time);
-			else currentDateEl.textContent = "No date selected";
+			currentDateEl.textContent = sel ? fmtFancy(sel.date, sel.time) : "No date selected";
 		}
 		function selectIndex(idx) {
 			selectedIndex = idx;
@@ -613,8 +592,10 @@
 			}
 			setEnabled(true);
 		}
+
 		function addDateEntryTo(dateStr) {
 			if (!dateStr) return;
+			// Default new entry at 00:00 for that date
 			if (!model.find(e => e.date === dateStr && (e.time || "00:00") === "00:00")) {
 				model.push({ date: dateStr, time: "00:00", details: "" });
 				dirty = true;
@@ -632,7 +613,7 @@
 			selectIndex(model.length ? 0 : -1);
 		}
 
-		// Load or create
+		// Load/create
 		async function ensureAndLoad() {
 			try {
 				setStatus("Locating file…");
@@ -648,9 +629,7 @@
 				renderList();
 				selectIndex(model.length ? 0 : -1);
 				setStatus("Ready", "ok");
-			} catch (e) {
-				setStatus(e.message, "warn");
-			}
+			} catch (e) { setStatus(e.message, "warn"); }
 		}
 
 		// Events
@@ -678,44 +657,28 @@
 			} catch (e) { setStatus(e.message, "warn"); }
 		});
 
-		// Add button: add to current date, or today if none selected
+		// Add: to current date or today
 		if (addBtn) addBtn.addEventListener("click", () => {
 			let targetDate = null;
-			if (selectedIndex >= 0 && model[selectedIndex]?.date) {
-				targetDate = model[selectedIndex].date;
-			} else {
+			if (selectedIndex >= 0 && model[selectedIndex]?.date) { targetDate = model[selectedIndex].date; }
+			else {
 				const now = new Date();
-				// local YYYY-MM-DD
 				targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
 			}
 			addDateEntryTo(targetDate);
 		});
 
 		if (deleteBtn) deleteBtn.addEventListener("click", () => { deleteSelected(); });
-
 		if (detailsEl) detailsEl.addEventListener("input", () => {
-			if (selectedIndex >= 0) {
-				model[selectedIndex].details = detailsEl.value;
-				dirty = true;
-			}
+			if (selectedIndex >= 0) { model[selectedIndex].details = detailsEl.value; dirty = true; }
 		});
 
-		// Warn on unload if dirty
-		window.addEventListener("beforeunload", (e) => {
-			if (dirty) { e.preventDefault(); e.returnValue = ""; }
-		});
+		window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 
-		// Boot
 		document.addEventListener("DOMContentLoaded", () => {
 			const ready = () => typeof google !== "undefined";
-			const boot = () => {
-				try { google.accounts.id.disableAutoSelect(); } catch { }
-				initAuth();
-			};
-			if (ready()) boot();
-			else {
-				const h = setInterval(() => { if (ready()) { clearInterval(h); boot(); } }, 50);
-			}
+			const boot = () => { try { google.accounts.id.disableAutoSelect(); } catch { } initAuth(); };
+			if (ready()) boot(); else { const h = setInterval(() => { if (ready()) { clearInterval(h); boot(); } }, 50); }
 		});
 	</script>
 </body>
