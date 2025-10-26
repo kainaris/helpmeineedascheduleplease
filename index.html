@@ -1,31 +1,17 @@
 <!doctype html>
-<html>
-  <body>
-    <div id="g_id_onload"
-         data-client_id="YOUR_CLIENT_ID"
-         data-context="signin"
-         data-ux_mode="popup"
-         data-callback="onSignIn">
-    </div>
-    <div class="g_id_signin" data-type="standard"></div>
-
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script>
-      async function onSignIn(response) {
-        // Exchange credential for access token with Google OAuth 2.0 endpoint
-        // using GIS token client
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: "YOUR_CLIENT_ID",
-          scope: "https://www.googleapis.com/auth/drive.readonly",
-          callback: async (tokResp) => {
-            const r = await fetch("https://www.googleapis.com/drive/v3/files?pageSize=10",
-              { headers: { Authorization: `Bearer ${tokResp.access_token}` }});
-            const data = await r.json();
-            console.log(data);
-          },
-        });
-        tokenClient.requestAccessToken();
-      }
-    </script>
-  </body>
-</html>
+<meta charset="utf-8">
+<button id="g">Sign in with Google</button>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  let tokenClient;
+  window.onload = () => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com",
+      scope: "https://www.googleapis.com/auth/drive.readonly",
+      callback: (resp) => console.log(resp)
+    });
+  };
+  document.getElementById('g').onclick = () => {
+    tokenClient.requestAccessToken();
+  };
+</script>
