@@ -1,231 +1,370 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Drive JSON Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      :root { --bg:#0b1020; --card:#121934; --ink:#e6ecff; --muted:#96a0c8; --accent:#5b8cff; --ok:#35c759; --warn:#ff9f0a; }
-      *{box-sizing:border-box}
-      body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #1b265a, #0b1020);color:var(--ink);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
-      .wrap{width:min(960px,100%);display:grid;gap:16px}
-      header{display:flex;align-items:center;justify-content:space-between}
-      h1{font-size:20px;margin:0}
-      .card{background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));border:1px solid rgba(255,255,255,0.08);backdrop-filter: blur(6px);border-radius:16px;padding:16px}
-      .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-      .pill{padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;color:var(--muted)}
-      button{cursor:pointer;border:0;padding:10px 14px;border-radius:12px;background:var(--accent);color:#fff;font-weight:600}
-      button.secondary{background:#273164}
-      button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.18)}
-      button:disabled{opacity:.6;cursor:not-allowed}
-      textarea{width:100%;height:380px;background:#0e1533;border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:var(--ink);padding:12px;font:13px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;resize:vertical}
-      .meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
-      a{color:#c9d6ff;text-decoration:underline}
-      .spacer{flex:1}
-      .status{font-size:12px;color:var(--muted)}
-      .status.ok{color:var(--ok)}
-      .status.warn{color:var(--warn)}
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header>
-        <h1>Google Drive JSON Editor</h1>
-        <div class="row">
-          <div id="g_id_onload"
-               data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
-               data-context="signin"
-               data-ux_mode="popup"
-               data-callback="onSignIn">
-          </div>
-          <div class="g_id_signin" data-type="standard"></div>
-        </div>
-      </header>
 
-      <div class="card">
-        <div class="row">
-          <div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
-          <div id="fileLink" class="pill" style="display:none"></div>
-          <span class="spacer"></span>
-          <button id="reloadBtn" class="ghost" disabled>Reload</button>
-          <button id="saveBtn" disabled>Save</button>
+<head>
+  <meta charset="utf-8" />
+  <title>Drive JSON Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121934;
+      --ink: #e6ecff;
+      --muted: #96a0c8;
+      --accent: #5b8cff;
+      --ok: #35c759;
+      --warn: #ff9f0a;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 20% -10%, #1b265a, #0b1020);
+      color: var(--ink);
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px
+    }
+
+    .wrap {
+      width: min(960px, 100%);
+      display: grid;
+      gap: 16px
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(6px);
+      border-radius: 16px;
+      padding: 16px
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: var(--muted)
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600
+    }
+
+    button.secondary {
+      background: #273164
+    }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.18)
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+    textarea {
+      width: 100%;
+      height: 380px;
+      background: #0e1533;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: var(--ink);
+      padding: 12px;
+      font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      resize: vertical
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    a {
+      color: #c9d6ff;
+      text-decoration: underline
+    }
+
+    .spacer {
+      flex: 1
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .status.ok {
+      color: var(--ok)
+    }
+
+    .status.warn {
+      color: var(--warn)
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Google Drive JSON Editor</h1>
+      <div class="row">
+        <div id="g_id_onload" data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
+          data-context="signin" data-ux_mode="popup" data-callback="onSignIn">
         </div>
-        <div class="meta" id="meta"></div>
-        <textarea id="editor" placeholder="{\n  \"example\": true\n}"></textarea>
-        <div class="row">
-          <span id="status" class="status">Not signed in</span>
-          <span class="spacer"></span>
-          <button id="formatBtn" class="ghost" disabled>Format JSON</button>
-        </div>
+        <div class="g_id_signin" data-type="standard"></div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="row">
+        <div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
+        <div id="fileLink" class="pill" style="display:none"></div>
+        <span class="spacer"></span>
+        <button id="reloadBtn" class="ghost" disabled>Reload</button>
+        <button id="saveBtn" disabled>Save</button>
+      </div>
+      <div class="meta" id="meta"></div>
+      <textarea id="editor" placeholder="{\n  \" example\": true\n}"></textarea>
+      <div class="row">
+        <span id="status" class="status">Not signed in</span>
+        <span class="spacer"></span>
+        <button id="formatBtn" class="ghost" disabled>Format JSON</button>
       </div>
     </div>
+  </div>
 
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script>
-      const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
-      const SCOPE = "https://www.googleapis.com/auth/drive.file";
-      const FILE_NAME = "helpmeineedaschedulepleasedata.json";
-      const MIME = "application/json; charset=UTF-8";
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // Config
+    const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
+    const SCOPE = "https://www.googleapis.com/auth/drive.file";
+    const FILE_NAME = "helpmeineedaschedulepleasedata.json";
+    const MIME = "application/json; charset=UTF-8";
 
-      let accessToken = null;
-      let fileId = null;
-      let tokenClient = null;
+    // State
+    let accessToken = null;
+    let fileId = null;
+    let tokenClient = null;
+    let gotConsentOnce = false;
 
-      const $ = (id) => document.getElementById(id);
-      const editor = $("editor");
-      const statusEl = $("status");
-      const metaEl = $("meta");
-      const fileLinkEl = $("fileLink");
-      const reloadBtn = $("reloadBtn");
-      const saveBtn = $("saveBtn");
-      const formatBtn = $("formatBtn");
+    // DOM
+    const $ = (id) => document.getElementById(id);
+    const editor = $("editor");
+    const statusEl = $("status");
+    const metaEl = $("meta");
+    const fileLinkEl = $("fileLink");
+    const reloadBtn = $("reloadBtn");
+    const saveBtn = $("saveBtn");
+    const formatBtn = $("formatBtn");
 
-      function setStatus(text, cls="") {
-        statusEl.className = "status " + cls;
-        statusEl.textContent = text;
+    // UI helpers
+    function setStatus(text, cls = "") {
+      statusEl.className = "status " + cls;
+      statusEl.textContent = text;
+    }
+    function setEnabled(on) {
+      [reloadBtn, saveBtn, formatBtn].forEach(b => b && (b.disabled = !on));
+    }
+    function hideSigninUi() {
+      const onloadDiv = document.getElementById("g_id_onload");
+      const btnDiv = document.querySelector(".g_id_signin");
+      if (onloadDiv) onloadDiv.style.display = "none";
+      if (btnDiv) btnDiv.style.display = "none";
+    }
+    function showSigninUi() {
+      const onloadDiv = document.getElementById("g_id_onload");
+      const btnDiv = document.querySelector(".g_id_signin");
+      if (onloadDiv) onloadDiv.style.display = "";
+      if (btnDiv) btnDiv.style.display = "";
+    }
+
+    // Sign-in flow
+    async function onSignIn() {
+      setStatus("Signing in…");
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPE,
+        callback: async (tokResp) => {
+          accessToken = tokResp.access_token;
+          hideSigninUi();
+          setEnabled(true);
+          setStatus("Signed in", "ok");
+          await ensureAndLoad(); // auto-create if missing
+        },
+        error_callback: (err) => {
+          console.error(err);
+          accessToken = null;
+          showSigninUi();
+          setEnabled(false);
+          setStatus("Sign-in canceled or failed", "warn");
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
+      gotConsentOnce = true;
+    }
+    window.onSignIn = onSignIn;
+
+    // Drive helpers
+    async function driveFetch(url, options = {}) {
+      if (!accessToken) throw new Error("No access token");
+      const res = await fetch(url, {
+        ...options,
+        headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
+      });
+      if (!res.ok) {
+        const msg = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status} ${res.statusText}: ${msg}`);
       }
-      function setEnabled(on) {
-        [reloadBtn, saveBtn, formatBtn].forEach(b => b.disabled = !on);
-      }
+      return res;
+    }
 
-      async function onSignIn() {
-        setStatus("Signing in…");
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPE,
-          callback: async (tokResp) => {
-            accessToken = tokResp.access_token;
-            setStatus("Signed in", "ok");
-            setEnabled(true);
-            await ensureAndLoad(); // auto-create if missing
-          },
-        });
-        tokenClient.requestAccessToken();
-      }
-      window.onSignIn = onSignIn;
+    async function findFileByName(name) {
+      const q = encodeURIComponent(`name='${name}' and trashed=false`);
+      const fields = encodeURIComponent("files(id,name,webViewLink,modifiedTime,size)");
+      const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive`);
+      const data = await res.json();
+      return data.files?.[0] || null;
+    }
 
-      // Drive helpers
-      async function driveFetch(url, options = {}) {
-        if (!accessToken) throw new Error("No access token");
-        const res = await fetch(url, {
-          ...options,
-          headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers||{}) },
-        });
-        if (!res.ok) {
-          const msg = await res.text().catch(()=>res.statusText);
-          throw new Error(`${res.status} ${res.statusText}: ${msg}`);
-        }
-        return res;
+    function buildMultipart(parts) {
+      const boundary = "-------314159265358979323846";
+      const crlf = "\r\n";
+      let data = "";
+      for (const p of parts) {
+        data += `--${boundary}${crlf}`;
+        data += `Content-Type: ${p.type}${crlf}${crlf}`;
+        data += `${p.data}${crlf}`;
       }
+      data += `--${boundary}--${crlf}`;
+      return { data, contentType: `multipart/related; boundary=${boundary}` };
+    }
 
-      async function findFileByName(name) {
-        const q = encodeURIComponent(`name='${name}' and trashed=false`);
-        const fields = encodeURIComponent("files(id,name,webViewLink,modifiedTime,size)");
-        const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive`);
-        const data = await res.json();
-        return data.files?.[0] || null;
-      }
+    async function createJsonFile(name, initialObj = {}) {
+      const metadata = { name, mimeType: "application/json" };
+      const body = buildMultipart([
+        { type: "application/json; charset=UTF-8", data: JSON.stringify(metadata) },
+        { type: MIME, data: JSON.stringify(initialObj, null, 2) }
+      ]);
+      const res = await driveFetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,modifiedTime,size",
+        { method: "POST", headers: { "Content-Type": body.contentType }, body: body.data }
+      );
+      return res.json();
+    }
 
-      function buildMultipart(parts) {
-        const boundary = "-------314159265358979323846";
-        const crlf = "\r\n";
-        let data = "";
-        for (const p of parts) {
-          data += `--${boundary}${crlf}`;
-          data += `Content-Type: ${p.type}${crlf}${crlf}`;
-          data += `${p.data}${crlf}`;
-        }
-        data += `--${boundary}--${crlf}`;
-        return { data, contentType: `multipart/related; boundary=${boundary}` };
-      }
+    async function getFileContent(id) {
+      const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+      return res.text();
+    }
 
-      async function createJsonFile(name, initialObj = {}) {
-        const metadata = { name, mimeType: "application/json" };
-        const body = buildMultipart([
-          { type: "application/json; charset=UTF-8", data: JSON.stringify(metadata) },
-          { type: MIME, data: JSON.stringify(initialObj, null, 2) }
-        ]);
-        const res = await driveFetch(
-          "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,modifiedTime,size",
-          { method: "POST", headers: { "Content-Type": body.contentType }, body: body.data }
-        );
-        return res.json();
-      }
+    async function saveFileContent(id, text) {
+      const res = await driveFetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+        { method: "PATCH", headers: { "Content-Type": MIME }, body: text }
+      );
+      return res.json();
+    }
 
-      async function getFileContent(id) {
-        const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
-        return res.text();
-      }
-
-      async function saveFileContent(id, text) {
-        const res = await driveFetch(
-          `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
-          { method: "PATCH", headers: { "Content-Type": MIME }, body: text }
-        );
-        return res.json();
-      }
-
-      function updateMeta(f) {
-        const size = f.size ? `${Number(f.size).toLocaleString()} bytes` : "unknown size";
-        metaEl.textContent = `Name: ${f.name} • Modified: ${new Date(f.modifiedTime).toLocaleString()} • ${size}`;
+    function updateMeta(f) {
+      const size = f.size ? `${Number(f.size).toLocaleString()} bytes` : "unknown size";
+      metaEl.textContent = `Name: ${f.name} • Modified: ${new Date(f.modifiedTime).toLocaleString()} • ${size}`;
+      if (fileLinkEl) {
         fileLinkEl.style.display = "inline-block";
         fileLinkEl.innerHTML = `<a href="${f.webViewLink}" target="_blank" rel="noopener">Open in Drive</a>`;
       }
+    }
 
-      function safePretty(text) {
-        try { return JSON.stringify(JSON.parse(text), null, 2); }
-        catch { return text; }
-      }
+    function safePretty(text) {
+      try { return JSON.stringify(JSON.parse(text), null, 2); }
+      catch { return text; }
+    }
 
-      // Auto-create-if-missing flow
-      async function ensureAndLoad() {
-        try {
-          setStatus("Locating file…");
-          let f = await findFileByName(FILE_NAME);
-          if (!f) {
-            setStatus("Creating file…");
-            const initial = { createdAt: new Date().toISOString(), data: {} };
-            f = await createJsonFile(FILE_NAME, initial);
-          }
-          fileId = f.id;
-          updateMeta(f);
-          setStatus("Loading…");
-          const text = await getFileContent(fileId);
-          editor.value = safePretty(text);
-          setStatus("Ready", "ok");
-        } catch (e) {
-          setStatus(e.message, "warn");
+    // Auto-create-if-missing flow
+    async function ensureAndLoad() {
+      try {
+        setStatus("Locating file…");
+        let f = await findFileByName(FILE_NAME);
+        if (!f) {
+          setStatus("Creating file…");
+          const initial = { createdAt: new Date().toISOString(), data: {} };
+          f = await createJsonFile(FILE_NAME, initial);
         }
+        fileId = f.id;
+        updateMeta(f);
+        setStatus("Loading…");
+        const text = await getFileContent(fileId);
+        if (editor) editor.value = safePretty(text);
+        setStatus("Ready", "ok");
+      } catch (e) {
+        setStatus(e.message, "warn");
       }
+    }
 
-      // UI
-      reloadBtn.addEventListener("click", async () => {
-        if (!fileId) { await ensureAndLoad(); return; }
-        try {
-          setStatus("Reloading…");
-          const text = await getFileContent(fileId);
-          editor.value = safePretty(text);
-          setStatus("Ready", "ok");
-        } catch (e) { setStatus(e.message, "warn"); }
-      });
+    // UI events
+    if (reloadBtn) reloadBtn.addEventListener("click", async () => {
+      if (!fileId) { await ensureAndLoad(); return; }
+      try {
+        setStatus("Reloading…");
+        const text = await getFileContent(fileId);
+        if (editor) editor.value = safePretty(text);
+        setStatus("Ready", "ok");
+      } catch (e) { setStatus(e.message, "warn"); }
+    });
 
-      saveBtn.addEventListener("click", async () => {
-        if (!fileId) { setStatus("No file to save", "warn"); return; }
-        try {
-          let text = editor.value;
-          try { JSON.parse(text); } catch { setStatus("Invalid JSON. Fix and try again.", "warn"); return; }
-          setStatus("Saving…");
-          await saveFileContent(fileId, text);
-          const f = await findFileByName(FILE_NAME);
-          if (f) updateMeta(f);
-          setStatus("Saved", "ok");
-        } catch (e) { setStatus(e.message, "warn"); }
-      });
+    if (saveBtn) saveBtn.addEventListener("click", async () => {
+      if (!fileId) { setStatus("No file to save", "warn"); return; }
+      try {
+        let text = editor ? editor.value : "{}";
+        try { JSON.parse(text); } catch { setStatus("Invalid JSON. Fix and try again.", "warn"); return; }
+        setStatus("Saving…");
+        await saveFileContent(fileId, text);
+        const f = await findFileByName(FILE_NAME);
+        if (f) updateMeta(f);
+        setStatus("Saved", "ok");
+      } catch (e) { setStatus(e.message, "warn"); }
+    });
 
-      formatBtn.addEventListener("click", () => {
-        try { editor.value = JSON.stringify(JSON.parse(editor.value), null, 2); setStatus("Formatted", "ok"); }
-        catch { setStatus("JSON parse error", "warn"); }
-      });
-    </script>
-  </body>
+    if (formatBtn) formatBtn.addEventListener("click", () => {
+      try { if (editor) editor.value = JSON.stringify(JSON.parse(editor.value), null, 2); setStatus("Formatted", "ok"); }
+      catch { setStatus("JSON parse error", "warn"); }
+    });
+  </script>
+
+</body>
+
 </html>
