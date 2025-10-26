@@ -125,7 +125,6 @@
 			color: var(--warn)
 		}
 
-		/* Calendar layout */
 		.calendar {
 			display: grid;
 			grid-template-columns: 260px 1fr;
@@ -258,7 +257,6 @@
 			</div>
 			<div class="meta" id="meta"></div>
 
-			<!-- Calendar UI -->
 			<div class="calendar">
 				<aside class="sidebar">
 					<div class="sidebar-header">
@@ -292,11 +290,15 @@
 		const FILE_NAME = "helpmeineedaschedulepleasedata.json";
 		const MIME = "application/json; charset=UTF-8";
 
+		// Auth cache
+		const LS_KEY = "drive-json-editor-token";
+		const LS_CONSENT = "drive-json-editor-consented";
+		let refreshTimer = null;
+
 		// State
 		let accessToken = null;
 		let fileId = null;
 		let tokenClient = null;
-		let gotConsentOnce = false;
 
 		// App model: array of {date:'YYYY-MM-DD', details:'...'}
 		let model = [];
@@ -340,14 +342,39 @@
 			if (btnDiv) btnDiv.style.display = "";
 		}
 
-		// Sign-in
-		async function onSignIn() {
-			setStatus("Signing in…");
+		// Token cache helpers
+		function saveToken(t) {
+			const expAt = Date.now() + (t.expires_in ? (t.expires_in - 60) * 1000 : 50 * 60 * 1000);
+			localStorage.setItem(LS_KEY, JSON.stringify({ token: t, expAt }));
+		}
+		function loadToken() {
+			try { return JSON.parse(localStorage.getItem(LS_KEY)); }
+			catch { return null; }
+		}
+		function clearToken() {
+			localStorage.removeItem(LS_KEY);
+		}
+		function scheduleRefresh(t) {
+			clearTimeout(refreshTimer);
+			const ms = Math.max(30_000, (t.expires_in ? (t.expires_in - 120) : 1800) * 1000);
+			refreshTimer = setTimeout(() => {
+				try {
+					tokenClient.requestAccessToken({ prompt: "" });
+				} catch { /* no-op */ }
+			}, ms);
+		}
+
+		// Init GIS and try silent auth
+		function initAuth() {
 			tokenClient = google.accounts.oauth2.initTokenClient({
 				client_id: CLIENT_ID,
 				scope: SCOPE,
 				callback: async (tokResp) => {
 					accessToken = tokResp.access_token;
+					try { google.accounts.oauth2.setToken(tokResp); } catch { /* ignore */ }
+					saveToken(tokResp);
+					localStorage.setItem(LS_CONSENT, "1");
+					scheduleRefresh(tokResp);
 					hideSigninUi();
 					setEnabled(true);
 					setStatus("Signed in", "ok");
@@ -361,8 +388,43 @@
 					setStatus("Sign-in canceled or failed", "warn");
 				},
 			});
-			tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
-			gotConsentOnce = true;
+
+			// Try cached token first
+			const cached = loadToken();
+			if (cached && cached.expAt > Date.now() && cached.token?.access_token) {
+				try { google.accounts.oauth2.setToken(cached.token); } catch { /* ignore */ }
+				accessToken = cached.token.access_token;
+				hideSigninUi();
+				setEnabled(true);
+				setStatus("Signed in", "ok");
+				ensureAndLoad();
+				const remaining = Math.max(5_000, cached.expAt - Date.now());
+				clearTimeout(refreshTimer);
+				refreshTimer = setTimeout(() => tokenClient.requestAccessToken({ prompt: "" }), remaining);
+			} else {
+				// Silent if consent was granted before. Otherwise show the button which will call onSignIn.
+				const gotConsentOnce = localStorage.getItem(LS_CONSENT) === "1";
+				if (gotConsentOnce) {
+					try { tokenClient.requestAccessToken({ prompt: "" }); }
+					catch { showSigninUi(); }
+				} else {
+					showSigninUi();
+				}
+			}
+		}
+
+		// Manual sign-in entry point from the GIS button
+		async function onSignIn() {
+			setStatus("Signing in…");
+			try {
+				if (!tokenClient) initAuth();
+				const gotConsentOnce = localStorage.getItem(LS_CONSENT) === "1";
+				tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
+			} catch (e) {
+				console.error(e);
+				setStatus("Sign-in init failed", "warn");
+				showSigninUi();
+			}
 		}
 		window.onSignIn = onSignIn;
 
@@ -373,6 +435,33 @@
 				...options,
 				headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
 			});
+			if (res.status === 401) {
+				// token expired; try silent refresh once
+				try {
+					await new Promise((resolve, reject) => {
+						tokenClient.callback = (tokResp) => {
+							accessToken = tokResp.access_token;
+							try { google.accounts.oauth2.setToken(tokResp); } catch { /* ignore */ }
+							saveToken(tokResp);
+							scheduleRefresh(tokResp);
+							resolve();
+						};
+						tokenClient.error_callback = reject;
+						tokenClient.requestAccessToken({ prompt: "" });
+					});
+					const retry = await fetch(url, {
+						...options,
+						headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
+					});
+					if (!retry.ok) throw new Error(`${retry.status} ${retry.statusText}`);
+					return retry;
+				} catch {
+					clearToken();
+					showSigninUi();
+					setEnabled(false);
+					throw new Error("Auth expired. Sign in again.");
+				}
+			}
 			if (!res.ok) {
 				const msg = await res.text().catch(() => res.statusText);
 				throw new Error(`${res.status} ${res.statusText}: ${msg}`);
@@ -437,7 +526,6 @@
 				if (Array.isArray(parsed)) return parsed;
 				if (parsed && typeof parsed === "object" && Array.isArray(parsed.data)) return parsed.data;
 				if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
-					// migrate object map { "2025-10-26": "details", ... } to array
 					return Object.entries(parsed.data).map(([date, details]) => ({ date, details: String(details ?? "") }));
 				}
 				return [];
@@ -561,6 +649,15 @@
 		// Warn on unload if dirty
 		window.addEventListener("beforeunload", (e) => {
 			if (dirty) { e.preventDefault(); e.returnValue = ""; }
+		});
+
+		// Boot
+		document.addEventListener("DOMContentLoaded", () => {
+			const ready = () => typeof google !== "undefined" && google.accounts?.oauth2;
+			if (ready()) initAuth();
+			else {
+				const h = setInterval(() => { if (ready()) { clearInterval(h); initAuth(); } }, 50);
+			}
 		});
 	</script>
 </body>
