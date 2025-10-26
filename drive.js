@@ -1,16 +1,16 @@
-// drive.js  — auth + Google Drive helpers only (no UI)
+// drive.js — auth + Google Drive helpers
 
-// Config
 const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const MIME = "application/json; charset=UTF-8";
 
-// State
 let accessToken = null;
 let tokenClient = null;
 let gotConsentOnce = false;
 
-// Public: begin OAuth, resolve when access token available
+export function isSignedIn() { return Boolean(accessToken); }
+export function getAccessToken() { return accessToken; }
+
 export async function signIn() {
 	return new Promise((resolve, reject) => {
 		try {
@@ -20,10 +20,12 @@ export async function signIn() {
 					scope: SCOPE,
 					callback: (tokResp) => {
 						accessToken = tokResp.access_token;
+						window.dispatchEvent(new CustomEvent("drive:signed-in"));
 						resolve(accessToken);
 					},
 					error_callback: (err) => {
 						accessToken = null;
+						window.dispatchEvent(new CustomEvent("drive:sign-in-error", { detail: err }));
 						reject(err);
 					},
 				});
@@ -34,11 +36,8 @@ export async function signIn() {
 	});
 }
 
-// Expose global callback for the <div data-callback="onSignIn">
-window.onSignIn = () => signIn().catch(() => { /* noop; UI handles errors */ });
-
-export function isSignedIn() { return Boolean(accessToken); }
-export function getAccessToken() { return accessToken; }
+// Expose GIS callback used by data-callback="onSignIn"
+window.onSignIn = () => { signIn().catch(() => { }); };
 
 // ---- Drive REST helpers ----
 async function driveFetch(url, options = {}) {
@@ -66,9 +65,7 @@ function buildMultipart(parts) {
 	const boundary = "-------314159265358979323846";
 	const crlf = "\r\n";
 	let data = "";
-	for (const p of parts) {
-		data += `--${boundary}${crlf}Content-Type: ${p.type}${crlf}${crlf}${p.data}${crlf}`;
-	}
+	for (const p of parts) data += `--${boundary}${crlf}Content-Type: ${p.type}${crlf}${crlf}${p.data}${crlf}`;
 	data += `--${boundary}--${crlf}`;
 	return { data, contentType: `multipart/related; boundary=${boundary}` };
 }
