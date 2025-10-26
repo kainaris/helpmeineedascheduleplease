@@ -5,136 +5,9 @@
   <meta charset="utf-8" />
   <title>Drive JSON Editor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- keep your existing CSS here unchanged -->
   <style>
-    :root {
-      --bg: #0b1020;
-      --card: #121934;
-      --ink: #e6ecff;
-      --muted: #96a0c8;
-      --accent: #5b8cff;
-      --ok: #35c759;
-      --warn: #ff9f0a;
-    }
-
-    * {
-      box-sizing: border-box
-    }
-
-    body {
-      margin: 0;
-      background: radial-gradient(1200px 800px at 20% -10%, #1b265a, #0b1020);
-      color: var(--ink);
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px
-    }
-
-    .wrap {
-      width: min(960px, 100%);
-      display: grid;
-      gap: 16px
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between
-    }
-
-    h1 {
-      font-size: 20px;
-      margin: 0
-    }
-
-    .card {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(6px);
-      border-radius: 16px;
-      padding: 16px
-    }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center
-    }
-
-    .pill {
-      padding: 6px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 999px;
-      color: var(--muted)
-    }
-
-    button {
-      cursor: pointer;
-      border: 0;
-      padding: 10px 14px;
-      border-radius: 12px;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600
-    }
-
-    button.secondary {
-      background: #273164
-    }
-
-    button.ghost {
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.18)
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: not-allowed
-    }
-
-    textarea {
-      width: 100%;
-      height: 380px;
-      background: #0e1533;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      color: var(--ink);
-      padding: 12px;
-      font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      resize: vertical
-    }
-
-    .meta {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-size: 12px
-    }
-
-    a {
-      color: #c9d6ff;
-      text-decoration: underline
-    }
-
-    .spacer {
-      flex: 1
-    }
-
-    .status {
-      font-size: 12px;
-      color: var(--muted)
-    }
-
-    .status.ok {
-      color: var(--ok)
-    }
-
-    .status.warn {
-      color: var(--warn)
-    }
+    /* ... your styles from the previous version ... */
   </style>
 </head>
 
@@ -144,162 +17,55 @@
       <h1>Google Drive JSON Editor</h1>
       <div class="row">
         <div id="g_id_onload" data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
-          data-context="signin" data-ux_mode="popup" data-callback="onSignIn">
-        </div>
+          data-context="signin" data-ux_mode="popup" data-callback="onSignIn"></div>
         <div class="g_id_signin" data-type="standard"></div>
       </div>
     </header>
 
-    <div class="card">
-      <div class="row">
-        <div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
-        <div id="fileLink" class="pill" style="display:none"></div>
-        <span class="spacer"></span>
-        <button id="reloadBtn" class="ghost" disabled>Reload</button>
-        <button id="saveBtn" disabled>Save</button>
-      </div>
-      <div class="meta" id="meta"></div>
-      <textarea id="editor" placeholder="{\n  \" example\": true\n}"></textarea>
-      <div class="row">
-        <span id="status" class="status">Not signed in</span>
-        <span class="spacer"></span>
-        <button id="formatBtn" class="ghost" disabled>Format JSON</button>
-      </div>
-    </div>
+    <!-- keep your existing calendar UI markup here unchanged -->
+    <div class="card"> <!-- controls + calendar layout --> <!-- ... --> </div>
   </div>
 
+  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    // Config
-    const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
-    const SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+  <!-- App logic imports Drive helpers -->
+  <script type="module">
+    import {
+      signIn, isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
+    } from './drive.js';
+
+    // constants matching your app
     const FILE_NAME = "helpmeineedaschedulepleasedata.json";
-    const MIME = "application/json; charset=UTF-8";
 
-    // State
-    let accessToken = null;
-    let fileId = null;
-    let tokenClient = null;
-    let gotConsentOnce = false;
-
-    // DOM
+    // grab DOM once
     const $ = (id) => document.getElementById(id);
-    const editor = $("editor");
     const statusEl = $("status");
     const metaEl = $("meta");
     const fileLinkEl = $("fileLink");
     const reloadBtn = $("reloadBtn");
     const saveBtn = $("saveBtn");
-    const formatBtn = $("formatBtn");
+    const addBtn = $("addBtn");
+    const deleteBtn = $("deleteBtn");
+    const newDateInput = $("newDateInput");
+    const listEl = $("list");
+    const detailsEl = $("details");
+    const currentDateEl = $("currentDate");
 
-    // UI helpers
+    let fileId = null;
+    let model = [];
+    let selectedIndex = -1;
+    let dirty = false;
+
     function setStatus(text, cls = "") {
       statusEl.className = "status " + cls;
       statusEl.textContent = text;
     }
     function setEnabled(on) {
-      [reloadBtn, saveBtn, formatBtn].forEach(b => b && (b.disabled = !on));
+      [reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
+      detailsEl.disabled = !on || selectedIndex < 0;
+      deleteBtn.disabled = !on || selectedIndex < 0;
     }
-    function hideSigninUi() {
-      const onloadDiv = document.getElementById("g_id_onload");
-      const btnDiv = document.querySelector(".g_id_signin");
-      if (onloadDiv) onloadDiv.style.display = "none";
-      if (btnDiv) btnDiv.style.display = "none";
-    }
-    function showSigninUi() {
-      const onloadDiv = document.getElementById("g_id_onload");
-      const btnDiv = document.querySelector(".g_id_signin");
-      if (onloadDiv) onloadDiv.style.display = "";
-      if (btnDiv) btnDiv.style.display = "";
-    }
-
-    // Sign-in flow
-    async function onSignIn() {
-      setStatus("Signing in…");
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPE,
-        callback: async (tokResp) => {
-          accessToken = tokResp.access_token;
-          hideSigninUi();
-          setEnabled(true);
-          setStatus("Signed in", "ok");
-          await ensureAndLoad(); // auto-create if missing
-        },
-        error_callback: (err) => {
-          console.error(err);
-          accessToken = null;
-          showSigninUi();
-          setEnabled(false);
-          setStatus("Sign-in canceled or failed", "warn");
-        },
-      });
-      tokenClient.requestAccessToken({ prompt: gotConsentOnce ? "" : "consent" });
-      gotConsentOnce = true;
-    }
-    window.onSignIn = onSignIn;
-
-    // Drive helpers
-    async function driveFetch(url, options = {}) {
-      if (!accessToken) throw new Error("No access token");
-      const res = await fetch(url, {
-        ...options,
-        headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
-      });
-      if (!res.ok) {
-        const msg = await res.text().catch(() => res.statusText);
-        throw new Error(`${res.status} ${res.statusText}: ${msg}`);
-      }
-      return res;
-    }
-
-    async function findFileByName(name) {
-      const q = encodeURIComponent(`name='${name}' and trashed=false`);
-      const fields = encodeURIComponent("files(id,name,webViewLink,modifiedTime,size)");
-      const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive`);
-      const data = await res.json();
-      return data.files?.[0] || null;
-    }
-
-    function buildMultipart(parts) {
-      const boundary = "-------314159265358979323846";
-      const crlf = "\r\n";
-      let data = "";
-      for (const p of parts) {
-        data += `--${boundary}${crlf}`;
-        data += `Content-Type: ${p.type}${crlf}${crlf}`;
-        data += `${p.data}${crlf}`;
-      }
-      data += `--${boundary}--${crlf}`;
-      return { data, contentType: `multipart/related; boundary=${boundary}` };
-    }
-
-    async function createJsonFile(name, initialObj = {}) {
-      const metadata = { name, mimeType: "application/json" };
-      const body = buildMultipart([
-        { type: "application/json; charset=UTF-8", data: JSON.stringify(metadata) },
-        { type: MIME, data: JSON.stringify(initialObj, null, 2) }
-      ]);
-      const res = await driveFetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,modifiedTime,size",
-        { method: "POST", headers: { "Content-Type": body.contentType }, body: body.data }
-      );
-      return res.json();
-    }
-
-    async function getFileContent(id) {
-      const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
-      return res.text();
-    }
-
-    async function saveFileContent(id, text) {
-      const res = await driveFetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
-        { method: "PATCH", headers: { "Content-Type": MIME }, body: text }
-      );
-      return res.json();
-    }
-
     function updateMeta(f) {
       const size = f.size ? `${Number(f.size).toLocaleString()} bytes` : "unknown size";
       metaEl.textContent = `Name: ${f.name} • Modified: ${new Date(f.modifiedTime).toLocaleString()} • ${size}`;
@@ -309,62 +75,116 @@
       }
     }
 
-    function safePretty(text) {
-      try { return JSON.stringify(JSON.parse(text), null, 2); }
-      catch { return text; }
+    // model helpers (same as before)
+    function normalizeLoaded(jsonText) {
+      try {
+        const parsed = JSON.parse(jsonText);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === "object" && Array.isArray(parsed.data)) return parsed.data;
+        if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
+          return Object.entries(parsed.data).map(([date, details]) => ({ date, details: String(details ?? "") }));
+        }
+        return [];
+      } catch { return []; }
+    }
+    function sortModel() { model.sort((a, b) => (a.date || "").localeCompare(b.date || "")); }
+    function renderList() {
+      listEl.innerHTML = "";
+      sortModel();
+      model.forEach((item, idx) => {
+        const el = document.createElement("div");
+        el.className = "item" + (idx === selectedIndex ? " active" : "");
+        const d = item.date || "";
+        const day = d.split("-")[2] || "";
+        const summary = (item.details || "").split("\n")[0];
+        el.innerHTML = `<div class="day">${day}</div><div>${d}</div><div class="summary">${summary}</div>`;
+        el.addEventListener("click", () => selectIndex(idx));
+        listEl.appendChild(el);
+      });
+    }
+    function selectIndex(idx) {
+      selectedIndex = idx;
+      renderList();
+      const sel = model[idx];
+      if (sel) { currentDateEl.textContent = sel.date; detailsEl.value = sel.details || ""; }
+      else { currentDateEl.textContent = "No date selected"; detailsEl.value = ""; }
+      setEnabled(isSignedIn());
+    }
+    function addDateEntry(isoDate) {
+      if (!isoDate) return;
+      if (!model.find(e => e.date === isoDate)) { model.push({ date: isoDate, details: "" }); dirty = true; }
+      renderList(); selectIndex(model.findIndex(e => e.date === isoDate));
+    }
+    function deleteSelected() {
+      if (selectedIndex < 0) return;
+      model.splice(selectedIndex, 1); dirty = true; selectedIndex = -1;
+      renderList(); selectIndex(model.length ? 0 : -1);
     }
 
-    // Auto-create-if-missing flow
     async function ensureAndLoad() {
       try {
         setStatus("Locating file…");
         let f = await findFileByName(FILE_NAME);
         if (!f) {
           setStatus("Creating file…");
-          const initial = { createdAt: new Date().toISOString(), data: {} };
-          f = await createJsonFile(FILE_NAME, initial);
+          f = await createJsonFile(FILE_NAME, []);
         }
         fileId = f.id;
         updateMeta(f);
         setStatus("Loading…");
         const text = await getFileContent(fileId);
-        if (editor) editor.value = safePretty(text);
+        model = normalizeLoaded(text);
+        renderList();
+        selectIndex(model.length ? 0 : -1);
         setStatus("Ready", "ok");
-      } catch (e) {
-        setStatus(e.message, "warn");
-      }
+      } catch (e) { setStatus(e.message, "warn"); }
     }
 
-    // UI events
-    if (reloadBtn) reloadBtn.addEventListener("click", async () => {
-      if (!fileId) { await ensureAndLoad(); return; }
+    // wire UI
+    reloadBtn?.addEventListener("click", async () => {
       try {
+        if (!fileId) { await ensureAndLoad(); return; }
         setStatus("Reloading…");
         const text = await getFileContent(fileId);
-        if (editor) editor.value = safePretty(text);
-        setStatus("Ready", "ok");
+        model = normalizeLoaded(text);
+        renderList(); selectIndex(model.length ? 0 : -1);
+        dirty = false; setStatus("Ready", "ok");
       } catch (e) { setStatus(e.message, "warn"); }
     });
 
-    if (saveBtn) saveBtn.addEventListener("click", async () => {
+    saveBtn?.addEventListener("click", async () => {
       if (!fileId) { setStatus("No file to save", "warn"); return; }
       try {
-        let text = editor ? editor.value : "{}";
-        try { JSON.parse(text); } catch { setStatus("Invalid JSON. Fix and try again.", "warn"); return; }
         setStatus("Saving…");
+        const text = JSON.stringify(model, null, 2);
         await saveFileContent(fileId, text);
         const f = await findFileByName(FILE_NAME);
         if (f) updateMeta(f);
-        setStatus("Saved", "ok");
+        dirty = false; setStatus("Saved", "ok");
       } catch (e) { setStatus(e.message, "warn"); }
     });
 
-    if (formatBtn) formatBtn.addEventListener("click", () => {
-      try { if (editor) editor.value = JSON.stringify(JSON.parse(editor.value), null, 2); setStatus("Formatted", "ok"); }
-      catch { setStatus("JSON parse error", "warn"); }
+    addBtn?.addEventListener("click", () => addDateEntry(newDateInput.value));
+    deleteBtn?.addEventListener("click", () => deleteSelected());
+    detailsEl?.addEventListener("input", () => {
+      if (selectedIndex >= 0) { model[selectedIndex].details = detailsEl.value; dirty = true; }
     });
-  </script>
 
+    // Start in signed-out state; GIS button triggers window.onSignIn -> drive.signIn()
+    window.addEventListener("load", async () => {
+      setEnabled(false);
+      setStatus("Not signed in");
+      // when sign-in completes, load file
+      const originalOnSignIn = window.onSignIn;
+      window.onSignIn = async () => {
+        try { await signIn(); setEnabled(true); setStatus("Signed in", "ok"); await ensureAndLoad(); }
+        catch { setEnabled(false); setStatus("Sign-in canceled or failed", "warn"); }
+        finally { /* keep callback available for reauth */ window.onSignIn = originalOnSignIn; }
+      };
+    });
+
+    window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+  </script>
 </body>
 
 </html>
