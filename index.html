@@ -2,189 +2,431 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <title>Drive JSON Editor</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- keep your existing CSS here unchanged -->
-  <style>
-    /* ... your styles from the previous version ... */
-  </style>
+	<meta charset="utf-8" />
+	<title>Google Drive JSON Editor</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style>
+		:root {
+			--bg: #0b1020;
+			--card: #121934;
+			--ink: #e6ecff;
+			--muted: #96a0c8;
+			--accent: #5b8cff;
+			--ok: #35c759;
+			--warn: #ff9f0a;
+		}
+
+		* {
+			box-sizing: border-box
+		}
+
+		body {
+			margin: 0;
+			background: radial-gradient(1200px 800px at 20% -10%, #1b265a, #0b1020);
+			color: var(--ink);
+			font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+			min-height: 100vh;
+			display: grid;
+			place-items: center;
+			padding: 24px
+		}
+
+		.wrap {
+			width: min(960px, 100%);
+			display: grid;
+			gap: 16px
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between
+		}
+
+		h1 {
+			font-size: 20px;
+			margin: 0
+		}
+
+		.card {
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			backdrop-filter: blur(6px);
+			border-radius: 16px;
+			padding: 16px
+		}
+
+		.row {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+			align-items: center
+		}
+
+		.pill {
+			padding: 6px 10px;
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 999px;
+			color: var(--muted)
+		}
+
+		button {
+			cursor: pointer;
+			border: 0;
+			padding: 10px 14px;
+			border-radius: 12px;
+			background: var(--accent);
+			color: #fff;
+			font-weight: 600
+		}
+
+		button.secondary {
+			background: #273164
+		}
+
+		button.ghost {
+			background: transparent;
+			border: 1px solid rgba(255, 255, 255, 0.18)
+		}
+
+		button:disabled {
+			opacity: .6;
+			cursor: not-allowed
+		}
+
+		textarea {
+			width: 100%;
+			height: 380px;
+			background: #0e1533;
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 12px;
+			color: var(--ink);
+			padding: 12px;
+			font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+			resize: vertical
+		}
+
+		.meta {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			color: var(--muted);
+			font-size: 12px
+		}
+
+		a {
+			color: #c9d6ff;
+			text-decoration: underline
+		}
+
+		.spacer {
+			flex: 1
+		}
+
+		.status {
+			font-size: 12px;
+			color: var(--muted)
+		}
+
+		.status.ok {
+			color: var(--ok)
+		}
+
+		.status.warn {
+			color: var(--warn)
+		}
+
+		/* APPEND-ONLY styles for the calendar UI */
+		.calendar {
+			display: grid;
+			grid-template-columns: 260px 1fr;
+			gap: 16px;
+			min-height: 420px
+		}
+
+		.sidebar {
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 12px;
+			overflow: hidden;
+			background: #0e1533;
+			display: flex;
+			flex-direction: column
+		}
+
+		.sidebar-header {
+			padding: 10px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+			display: flex;
+			gap: 8px;
+			align-items: center
+		}
+
+		.date-input {
+			width: 100%;
+			padding: 8px 10px;
+			border-radius: 8px;
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: #0b1130;
+			color: var(--ink)
+		}
+
+		.list {
+			overflow: auto
+		}
+
+		.item {
+			padding: 10px 12px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+			cursor: pointer;
+			display: flex;
+			gap: 8px;
+			align-items: center
+		}
+
+		.item:last-child {
+			border-bottom: 0
+		}
+
+		.item.active {
+			background: rgba(91, 140, 255, .15)
+		}
+
+		.item .day {
+			font-weight: 700;
+			min-width: 2ch
+		}
+
+		.item .summary {
+			color: var(--muted);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			flex: 1
+		}
+
+		.main {
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 12px;
+			background: #0e1533;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden
+		}
+
+		.main-header {
+			padding: 12px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+			display: flex;
+			gap: 10px;
+			align-items: center
+		}
+
+		.main-header h2 {
+			margin: 0;
+			font-size: 16px
+		}
+
+		.details {
+			width: 100%;
+			flex: 1;
+			background: transparent;
+			border: 0;
+			color: var(--ink);
+			padding: 12px;
+			font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+			resize: none
+		}
+
+		.main-footer {
+			padding: 12px;
+			border-top: 1px solid rgba(255, 255, 255, 0.12);
+			display: flex;
+			gap: 8px;
+			align-items: center
+		}
+	</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <header>
-      <h1>Google Drive JSON Editor</h1>
-      <div class="row">
-        <div id="g_id_onload" data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
-          data-context="signin" data-ux_mode="popup" data-callback="onSignIn"></div>
-        <div class="g_id_signin" data-type="standard"></div>
-      </div>
-    </header>
+	<div class="wrap">
+		<header>
+			<h1>Google Drive JSON Editor</h1>
+			<div class="row">
+				<div id="g_id_onload"
+					data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
+					data-context="signin" data-ux_mode="popup" data-callback="onSignIn"></div>
+				<div class="g_id_signin" data-type="standard"></div>
+			</div>
+		</header>
 
-    <!-- keep your existing calendar UI markup here unchanged -->
-    <div class="card"> <!-- controls + calendar layout --> <!-- ... --> </div>
-  </div>
+		<div class="card">
+			<div class="row">
+				<div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
+				<div id="fileLink" class="pill" style="display:none"></div>
+				<span class="spacer"></span>
+				<button id="reloadBtn" class="ghost" disabled>Reload</button>
+				<button id="saveBtn" disabled>Save</button>
+			</div>
+			<div class="meta" id="meta"></div>
 
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+			<div class="calendar">
+				<aside class="sidebar">
+					<div class="sidebar-header">
+						<input id="newDateInput" class="date-input" type="date" />
+						<button id="addBtn" class="secondary" disabled>Add</button>
+					</div>
+					<div id="list" class="list"></div>
+				</aside>
 
-  <!-- App logic imports Drive helpers -->
-  <script type="module">
-    import {
-      signIn, isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
-    } from './drive.js';
+				<section class="main">
+					<div class="main-header">
+						<h2 id="currentDate">No date selected</h2>
+						<span class="spacer"></span>
+						<button id="deleteBtn" class="ghost" disabled>Delete</button>
+					</div>
+					<textarea id="details" class="details" placeholder="Write details for the selected date…"
+						disabled></textarea>
+					<div class="main-footer">
+						<span id="status" class="status">Not signed in</span>
+					</div>
+				</section>
+			</div>
+		</div>
+	</div>
 
-    // constants matching your app
-    const FILE_NAME = "helpmeineedaschedulepleasedata.json";
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    // grab DOM once
-    const $ = (id) => document.getElementById(id);
-    const statusEl = $("status");
-    const metaEl = $("meta");
-    const fileLinkEl = $("fileLink");
-    const reloadBtn = $("reloadBtn");
-    const saveBtn = $("saveBtn");
-    const addBtn = $("addBtn");
-    const deleteBtn = $("deleteBtn");
-    const newDateInput = $("newDateInput");
-    const listEl = $("list");
-    const detailsEl = $("details");
-    const currentDateEl = $("currentDate");
+	<script type="module">
+		import {
+			signIn, isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
+		} from './drive.js';
 
-    let fileId = null;
-    let model = [];
-    let selectedIndex = -1;
-    let dirty = false;
+		const FILE_NAME = "helpmeineedaschedulepleasedata.json";
 
-    function setStatus(text, cls = "") {
-      statusEl.className = "status " + cls;
-      statusEl.textContent = text;
-    }
-    function setEnabled(on) {
-      [reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
-      detailsEl.disabled = !on || selectedIndex < 0;
-      deleteBtn.disabled = !on || selectedIndex < 0;
-    }
-    function updateMeta(f) {
-      const size = f.size ? `${Number(f.size).toLocaleString()} bytes` : "unknown size";
-      metaEl.textContent = `Name: ${f.name} • Modified: ${new Date(f.modifiedTime).toLocaleString()} • ${size}`;
-      if (fileLinkEl) {
-        fileLinkEl.style.display = "inline-block";
-        fileLinkEl.innerHTML = `<a href="${f.webViewLink}" target="_blank" rel="noopener">Open in Drive</a>`;
-      }
-    }
+		const $ = (id) => document.getElementById(id);
+		const statusEl = $("status");
+		const metaEl = $("meta");
+		const fileLinkEl = $("fileLink");
+		const reloadBtn = $("reloadBtn");
+		const saveBtn = $("saveBtn");
+		const addBtn = $("addBtn");
+		const deleteBtn = $("deleteBtn");
+		const newDateInput = $("newDateInput");
+		const listEl = $("list");
+		const detailsEl = $("details");
+		const currentDateEl = $("currentDate");
 
-    // model helpers (same as before)
-    function normalizeLoaded(jsonText) {
-      try {
-        const parsed = JSON.parse(jsonText);
-        if (Array.isArray(parsed)) return parsed;
-        if (parsed && typeof parsed === "object" && Array.isArray(parsed.data)) return parsed.data;
-        if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
-          return Object.entries(parsed.data).map(([date, details]) => ({ date, details: String(details ?? "") }));
-        }
-        return [];
-      } catch { return []; }
-    }
-    function sortModel() { model.sort((a, b) => (a.date || "").localeCompare(b.date || "")); }
-    function renderList() {
-      listEl.innerHTML = "";
-      sortModel();
-      model.forEach((item, idx) => {
-        const el = document.createElement("div");
-        el.className = "item" + (idx === selectedIndex ? " active" : "");
-        const d = item.date || "";
-        const day = d.split("-")[2] || "";
-        const summary = (item.details || "").split("\n")[0];
-        el.innerHTML = `<div class="day">${day}</div><div>${d}</div><div class="summary">${summary}</div>`;
-        el.addEventListener("click", () => selectIndex(idx));
-        listEl.appendChild(el);
-      });
-    }
-    function selectIndex(idx) {
-      selectedIndex = idx;
-      renderList();
-      const sel = model[idx];
-      if (sel) { currentDateEl.textContent = sel.date; detailsEl.value = sel.details || ""; }
-      else { currentDateEl.textContent = "No date selected"; detailsEl.value = ""; }
-      setEnabled(isSignedIn());
-    }
-    function addDateEntry(isoDate) {
-      if (!isoDate) return;
-      if (!model.find(e => e.date === isoDate)) { model.push({ date: isoDate, details: "" }); dirty = true; }
-      renderList(); selectIndex(model.findIndex(e => e.date === isoDate));
-    }
-    function deleteSelected() {
-      if (selectedIndex < 0) return;
-      model.splice(selectedIndex, 1); dirty = true; selectedIndex = -1;
-      renderList(); selectIndex(model.length ? 0 : -1);
-    }
+		let fileId = null;
+		let model = [];
+		let selectedIndex = -1;
+		let dirty = false;
 
-    async function ensureAndLoad() {
-      try {
-        setStatus("Locating file…");
-        let f = await findFileByName(FILE_NAME);
-        if (!f) {
-          setStatus("Creating file…");
-          f = await createJsonFile(FILE_NAME, []);
-        }
-        fileId = f.id;
-        updateMeta(f);
-        setStatus("Loading…");
-        const text = await getFileContent(fileId);
-        model = normalizeLoaded(text);
-        renderList();
-        selectIndex(model.length ? 0 : -1);
-        setStatus("Ready", "ok");
-      } catch (e) { setStatus(e.message, "warn"); }
-    }
+		function setStatus(text, cls = "") { statusEl.className = "status " + cls; statusEl.textContent = text; }
+		function setEnabled(on) {
+			[reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
+			detailsEl.disabled = !on || selectedIndex < 0;
+			deleteBtn.disabled = !on || selectedIndex < 0;
+		}
+		function updateMeta(f) {
+			const size = f.size ? `${Number(f.size).toLocaleString()} bytes` : "unknown size";
+			metaEl.textContent = `Name: ${f.name} • Modified: ${new Date(f.modifiedTime).toLocaleString()} • ${size}`;
+			if (fileLinkEl) {
+				fileLinkEl.style.display = "inline-block";
+				fileLinkEl.innerHTML = `<a href="${f.webViewLink}" target="_blank" rel="noopener">Open in Drive</a>`;
+			}
+		}
+		function normalizeLoaded(jsonText) {
+			try {
+				const parsed = JSON.parse(jsonText);
+				if (Array.isArray(parsed)) return parsed;
+				if (parsed && typeof parsed === "object" && Array.isArray(parsed.data)) return parsed.data;
+				if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
+					return Object.entries(parsed.data).map(([date, details]) => ({ date, details: String(details ?? "") }));
+				}
+				return [];
+			} catch { return []; }
+		}
+		function sortModel() { model.sort((a, b) => (a.date || "").localeCompare(b.date || "")); }
+		function renderList() {
+			listEl.innerHTML = "";
+			sortModel();
+			model.forEach((item, idx) => {
+				const el = document.createElement("div");
+				el.className = "item" + (idx === selectedIndex ? " active" : "");
+				const d = item.date || "";
+				const day = d.split("-")[2] || "";
+				const summary = (item.details || "").split("\n")[0];
+				el.innerHTML = `<div class="day">${day}</div><div>${d}</div><div class="summary">${summary}</div>`;
+				el.addEventListener("click", () => selectIndex(idx));
+				listEl.appendChild(el);
+			});
+		}
+		function selectIndex(idx) {
+			selectedIndex = idx;
+			renderList();
+			const sel = model[idx];
+			if (sel) { currentDateEl.textContent = sel.date; detailsEl.value = sel.details || ""; }
+			else { currentDateEl.textContent = "No date selected"; detailsEl.value = ""; }
+			setEnabled(isSignedIn());
+		}
+		function addDateEntry(isoDate) {
+			if (!isoDate) return;
+			if (!model.find(e => e.date === isoDate)) { model.push({ date: isoDate, details: "" }); dirty = true; }
+			renderList(); selectIndex(model.findIndex(e => e.date === isoDate));
+		}
+		function deleteSelected() {
+			if (selectedIndex < 0) return;
+			model.splice(selectedIndex, 1); dirty = true; selectedIndex = -1;
+			renderList(); selectIndex(model.length ? 0 : -1);
+		}
+		async function ensureAndLoad() {
+			try {
+				setStatus("Locating file…");
+				let f = await findFileByName(FILE_NAME);
+				if (!f) { setStatus("Creating file…"); f = await createJsonFile(FILE_NAME, []); }
+				fileId = f.id;
+				updateMeta(f);
+				setStatus("Loading…");
+				const text = await getFileContent(fileId);
+				model = normalizeLoaded(text);
+				renderList();
+				selectIndex(model.length ? 0 : -1);
+				setStatus("Ready", "ok");
+			} catch (e) { setStatus(e.message, "warn"); }
+		}
 
-    // wire UI
-    reloadBtn?.addEventListener("click", async () => {
-      try {
-        if (!fileId) { await ensureAndLoad(); return; }
-        setStatus("Reloading…");
-        const text = await getFileContent(fileId);
-        model = normalizeLoaded(text);
-        renderList(); selectIndex(model.length ? 0 : -1);
-        dirty = false; setStatus("Ready", "ok");
-      } catch (e) { setStatus(e.message, "warn"); }
-    });
+		reloadBtn?.addEventListener("click", async () => {
+			try {
+				if (!fileId) { await ensureAndLoad(); return; }
+				setStatus("Reloading…");
+				const text = await getFileContent(fileId);
+				model = normalizeLoaded(text);
+				renderList(); selectIndex(model.length ? 0 : -1);
+				dirty = false; setStatus("Ready", "ok");
+			} catch (e) { setStatus(e.message, "warn"); }
+		});
 
-    saveBtn?.addEventListener("click", async () => {
-      if (!fileId) { setStatus("No file to save", "warn"); return; }
-      try {
-        setStatus("Saving…");
-        const text = JSON.stringify(model, null, 2);
-        await saveFileContent(fileId, text);
-        const f = await findFileByName(FILE_NAME);
-        if (f) updateMeta(f);
-        dirty = false; setStatus("Saved", "ok");
-      } catch (e) { setStatus(e.message, "warn"); }
-    });
+		saveBtn?.addEventListener("click", async () => {
+			if (!fileId) { setStatus("No file to save", "warn"); return; }
+			try {
+				setStatus("Saving…");
+				const text = JSON.stringify(model, null, 2);
+				await saveFileContent(fileId, text);
+				const f = await findFileByName(FILE_NAME);
+				if (f) updateMeta(f);
+				dirty = false; setStatus("Saved", "ok");
+			} catch (e) { setStatus(e.message, "warn"); }
+		});
 
-    addBtn?.addEventListener("click", () => addDateEntry(newDateInput.value));
-    deleteBtn?.addEventListener("click", () => deleteSelected());
-    detailsEl?.addEventListener("input", () => {
-      if (selectedIndex >= 0) { model[selectedIndex].details = detailsEl.value; dirty = true; }
-    });
+		addBtn?.addEventListener("click", () => addDateEntry(newDateInput.value));
+		deleteBtn?.addEventListener("click", () => deleteSelected());
+		detailsEl?.addEventListener("input", () => {
+			if (selectedIndex >= 0) { model[selectedIndex].details = detailsEl.value; dirty = true; }
+		});
 
-    // Start in signed-out state; GIS button triggers window.onSignIn -> drive.signIn()
-    window.addEventListener("load", async () => {
-      setEnabled(false);
-      setStatus("Not signed in");
-      // when sign-in completes, load file
-      const originalOnSignIn = window.onSignIn;
-      window.onSignIn = async () => {
-        try { await signIn(); setEnabled(true); setStatus("Signed in", "ok"); await ensureAndLoad(); }
-        catch { setEnabled(false); setStatus("Sign-in canceled or failed", "warn"); }
-        finally { /* keep callback available for reauth */ window.onSignIn = originalOnSignIn; }
-      };
-    });
-
-    window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
-  </script>
+		window.addEventListener("load", () => { setEnabled(false); setStatus("Not signed in"); });
+		window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+	</script>
 </body>
 
 </html>
