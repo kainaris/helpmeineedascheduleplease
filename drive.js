@@ -1,4 +1,4 @@
-// drive.js — Google Identity + Drive REST helpers (no UI)
+// drive.js — Google OAuth token + Drive REST
 
 const CLIENT_ID = "314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -12,6 +12,10 @@ export function isSignedIn() { return Boolean(accessToken); }
 export function getAccessToken() { return accessToken; }
 
 export async function signIn() {
+	// require GIS to be present
+	if (!(window.google && google.accounts && google.accounts.oauth2)) {
+		throw new Error("Google Identity Services not loaded");
+	}
 	return new Promise((resolve, reject) => {
 		try {
 			if (!tokenClient) {

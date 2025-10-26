@@ -136,7 +136,6 @@
 			color: var(--warn)
 		}
 
-		/* Calendar UI */
 		.calendar {
 			display: grid;
 			grid-template-columns: 260px 1fr;
@@ -245,7 +244,6 @@
 			align-items: center
 		}
 
-		/* Gate UI until signed in */
 		#app {
 			display: none
 		}
@@ -257,14 +255,11 @@
 		<header>
 			<h1>Google Drive JSON Editor</h1>
 			<div class="row">
-				<div id="g_id_onload"
-					data-client_id="314049507451-oofo1sdelr7knosuu975ad6c27o8f1dk.apps.googleusercontent.com"
-					data-context="signin" data-ux_mode="popup" data-callback="onSignIn"></div>
-				<div class="g_id_signin" data-type="standard"></div>
+				<!-- Plain sign-in button replaces GIS-rendered button -->
+				<button id="signInBtn">Sign in with Google</button>
 			</div>
 		</header>
 
-		<!-- Hidden app -->
 		<div id="app" class="card">
 			<div class="row">
 				<div class="pill">File: <strong>helpmeineedaschedulepleasedata.json</strong></div>
@@ -300,33 +295,31 @@
 		</div>
 	</div>
 
-	<!-- 1) Global stub so GIS always finds a function -->
-	<script>
-		window.__driveCallQueue = 0;
-		window.onSignIn = function () {
-			if (typeof window.__driveSignIn === "function") return window.__driveSignIn();
-			window.__driveCallQueue++;
-		};
-	</script>
+	<!-- Google Identity Services (needed for oauth2 token client) -->
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-	<!-- 2) App module: bind real sign-in and run the app after event -->
 	<script type="module">
 		import {
 			signIn, isSignedIn, findFileByName, createJsonFile, getFileContent, saveFileContent
 		} from './drive.js';
 
-		// Bind the real sign-in for the stub
-		window.__driveSignIn = async () => {
-			try { await signIn(); window.dispatchEvent(new CustomEvent("drive:signed-in")); }
-			catch (e) { window.dispatchEvent(new CustomEvent("drive:sign-in-error", { detail: e })); }
-		};
-		if (window.__driveCallQueue > 0) window.__driveSignIn();
+		// Wait for GIS to be ready before attempting sign-in
+		function waitForGis() {
+			return new Promise((resolve) => {
+				if (window.google && google.accounts && google.accounts.oauth2) return resolve();
+				const t0 = Date.now();
+				const i = setInterval(() => {
+					if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(i); resolve(); }
+					else if (Date.now() - t0 > 8000) { clearInterval(i); resolve(); } // resolve anyway; signIn will throw if missing
+				}, 50);
+			});
+		}
 
 		const FILE_NAME = "helpmeineedaschedulepleasedata.json";
 
-		// DOM
 		const $ = (id) => document.getElementById(id);
 		const appEl = $("app");
+		const signInBtn = $("signInBtn");
 		const statusEl = $("status");
 		const metaEl = $("meta");
 		const fileLinkEl = $("fileLink");
@@ -339,19 +332,11 @@
 		const detailsEl = $("details");
 		const currentDateEl = $("currentDate");
 
-		// State
 		let fileId = null;
 		let model = [];
 		let selectedIndex = -1;
 		let dirty = false;
 
-		// UI helpers
-		function hideSigninUi() {
-			const onloadDiv = document.getElementById("g_id_onload");
-			const btnDiv = document.querySelector(".g_id_signin");
-			if (onloadDiv) onloadDiv.style.display = "none";
-			if (btnDiv) btnDiv.style.display = "none";
-		}
 		function setStatus(text, cls = "") { statusEl.className = "status " + cls; statusEl.textContent = text; }
 		function setEnabled(on) {
 			[reloadBtn, saveBtn, addBtn].forEach(b => b && (b.disabled = !on));
@@ -413,14 +398,21 @@
 			setStatus("Ready", "ok");
 		}
 
-		// Gate: only reveal app after sign-in
-		window.addEventListener("drive:signed-in", async () => {
-			hideSigninUi();
-			appEl.style.display = "";
-			await ensureAndLoad();
+		signInBtn.addEventListener("click", async () => {
+			signInBtn.disabled = true;
+			setStatus("Signing in…");
+			await waitForGis();
+			try {
+				await signIn();
+				signInBtn.style.display = "none";
+				appEl.style.display = "";
+				await ensureAndLoad();
+			} catch (e) {
+				setStatus("Sign-in failed", "warn");
+				signInBtn.disabled = false;
+			}
 		});
 
-		// Buttons
 		reloadBtn?.addEventListener("click", async () => {
 			if (!fileId) { await ensureAndLoad(); return; }
 			setStatus("Reloading…");
@@ -454,9 +446,6 @@
 
 		window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 	</script>
-
-	<!-- 3) Load GIS last -->
-	<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 
 </html>
